@@ -14,8 +14,9 @@ Of course, if your ears explode, I'm not responsible, because have FULLY read th
 Install Panorea
 
 ```bash
-  sh /your/path/install-files/install.sh
-  sh /your/path/install-files/build.sh
+  cd /path-to/panorea/
+  sh /path-to/panorea/install-files/install.sh
+  sh /path-to/panorea/install-files/build.sh
 ```
 Of course, the software is designed for Linux OSes, you may compile it, in this case, you can manually install FreePascal compiler, and aplay. And then manually compile ``` panorea.pas ``` and place it in ``` bin/panorea ``` 
 ## Usage/Examples
