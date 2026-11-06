@@ -8,16 +8,17 @@ Just a software that plays music !
 
 ## WARNING !
 
-Of course, if your ears explode, I'm not responsible, because have FULLY read the policy, at ``` miscellaneous/licence.txt ```
+Of course, if your ears explode, I'm not responsible, because you have FULLY read the policy, at ``` miscellaneous/licence.txt ```
 ## Installation
 
 Install Panorea
 
 ```bash
-  sh /your/path/install-files/install.sh
-  sh /your/path/install-files/build.sh
+  cd /path-to/panorea/
+  sh install-files/build.sh
+  sh install-files/install.sh
 ```
-Of course, the software is designed for Linux OSes, you may compile it, in this case, you can manually install FreePascal compiler, and aplay. And then manually compile ``` panorea.pas ``` and place it in ``` bin/panorea ``` 
+Of course, the software is designed for Linux OSes, if you happen to be on FreeBSD or macOS, you can install FreePascal compiler, and aplay. And then manually compile ``` panorea.pas ``` and place it in ``` bin/panorea ``` 
 ## Usage/Examples
 
 Panorea export and read ".music" files
@@ -70,4 +71,4 @@ However, if you want to match the meaning of this name, you may like to pronouce
 
 ## Help ! 
 
-This is the magic of open source, I gave you the code, fork it, or ask me if someone want to be the new maintener. Or this project will die ! 
+This is the magic of open source, I gave you the code, fork it, or ask me if someone wants to be the new maintener. Or this project will die ! 
