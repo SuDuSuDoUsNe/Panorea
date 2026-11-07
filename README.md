@@ -18,7 +18,7 @@ Install Panorea
   sh install-files/build.sh
   sh install-files/install.sh
 ```
-Of course, the software is designed for Linux OSes, if you happen to be on FreeBSD or macOS, you can install FreePascal compiler, and aplay. And then manually compile ``` panorea.pas ``` and place it in ``` bin/panorea ``` 
+Of course, the software is designed for Linux OSes, if you happen to be on FreeBSD, you can install FreePascal compiler, and aplay. And then manually compile ``` panorea.pas ``` and place it in ``` bin/panorea ``` 
 ## Usage/Examples
 
 Panorea export and read ".music" files
