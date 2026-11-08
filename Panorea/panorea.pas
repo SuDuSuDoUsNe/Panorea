@@ -34,7 +34,7 @@ begin
     active_tracks := 0;
     current_chunk := chord_string + '/';
 
-    // 1. EXTRACTION DES FREQUENCES (Jusqu'à 4 canaux)
+    // 1. Extract note frequencies (up to 4 channels).
     while (Length(current_chunk) > 0) and (active_tracks < 4) do
     begin
         p := Pos('/', current_chunk);
@@ -111,7 +111,7 @@ begin
         end;
     end;
 
-    // 2. ECRITURE SIMULTANEE DANS CHAQUE FICHIER DE CANAL
+    // 2. Write samples simultaneously to each channel file.
     for track := 0 to 3 do
     begin
         for i := 0 to sample_count - 1 do
