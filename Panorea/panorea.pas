@@ -20,6 +20,168 @@ var
     export_name: string;
     show_example: boolean;
 
+function IsValidDurationText(const duration_text: string): Boolean;
+var
+    duration_value: Integer;
+begin
+    if not TryStrToInt(duration_text, duration_value) then
+        Exit(False);
+    Result := duration_value > 0;
+end;
+
+function NoteMatchesPitch(const note_text, pitch: string): Boolean;
+var
+    octave_text: string;
+    octave_value: Integer;
+    i, first_digit: Integer;
+begin
+    Result := False;
+    if Copy(note_text, 1, Length(pitch)) <> pitch then
+        Exit;
+
+    octave_text := Copy(note_text, Length(pitch) + 1, Length(note_text));
+    if octave_text = '' then
+    begin
+        // The note parser has historically treated an omitted octave as octave 4.
+        Result := True;
+        Exit;
+    end;
+
+    first_digit := 1;
+    if octave_text[1] = '-' then
+        first_digit := 2;
+    if first_digit > Length(octave_text) then
+        Exit;
+
+    for i := first_digit to Length(octave_text) do
+        if not (octave_text[i] in ['0'..'9']) then
+            Exit;
+
+    Result := TryStrToInt(octave_text, octave_value);
+end;
+
+function IsValidNoteToken(const note_text: string; notation: char): Boolean;
+var
+    normalized_note: string;
+begin
+    normalized_note := UpperCase(Trim(note_text));
+    case notation of
+        '1':
+            Result := NoteMatchesPitch(normalized_note, 'C') or
+                      NoteMatchesPitch(normalized_note, 'DB') or
+                      NoteMatchesPitch(normalized_note, 'C#') or
+                      NoteMatchesPitch(normalized_note, 'D') or
+                      NoteMatchesPitch(normalized_note, 'E') or
+                      NoteMatchesPitch(normalized_note, 'F') or
+                      NoteMatchesPitch(normalized_note, 'G') or
+                      NoteMatchesPitch(normalized_note, 'A') or
+                      NoteMatchesPitch(normalized_note, 'BB') or
+                      NoteMatchesPitch(normalized_note, 'A#') or
+                      NoteMatchesPitch(normalized_note, 'B');
+        '2':
+            Result := NoteMatchesPitch(normalized_note, 'DO') or
+                      NoteMatchesPitch(normalized_note, 'REB') or
+                      NoteMatchesPitch(normalized_note, 'DO#') or
+                      NoteMatchesPitch(normalized_note, 'RE') or
+                      NoteMatchesPitch(normalized_note, 'MI') or
+                      NoteMatchesPitch(normalized_note, 'FA') or
+                      NoteMatchesPitch(normalized_note, 'SOL') or
+                      NoteMatchesPitch(normalized_note, 'LA') or
+                      NoteMatchesPitch(normalized_note, 'SIB') or
+                      NoteMatchesPitch(normalized_note, 'LA#') or
+                      NoteMatchesPitch(normalized_note, 'SI');
+        '3':
+            Result := NoteMatchesPitch(normalized_note, 'C') or
+                      NoteMatchesPitch(normalized_note, 'DES') or
+                      NoteMatchesPitch(normalized_note, 'D') or
+                      NoteMatchesPitch(normalized_note, 'E') or
+                      NoteMatchesPitch(normalized_note, 'F') or
+                      NoteMatchesPitch(normalized_note, 'G') or
+                      NoteMatchesPitch(normalized_note, 'A') or
+                      NoteMatchesPitch(normalized_note, 'B') or
+                      NoteMatchesPitch(normalized_note, 'H');
+        else
+            Result := False;
+    end;
+end;
+
+function ValidatePartition(const partition: string; notation: char): Boolean;
+var
+    remaining, chunk, chord_text, duration_text, note_list, note_text: string;
+    space_pos, colon_pos, slash_pos, note_count: Integer;
+begin
+    Result := False;
+    remaining := Trim(partition) + ' ';
+
+    while Length(remaining) > 0 do
+    begin
+        space_pos := Pos(' ', remaining);
+        if space_pos = 0 then
+            Break;
+        chunk := Copy(remaining, 1, space_pos - 1);
+        Delete(remaining, 1, space_pos);
+
+        if chunk = '' then
+            Continue;
+
+        colon_pos := Pos(':', chunk);
+        if colon_pos = 0 then
+        begin
+            writeln('Error: Invalid duration format in "', chunk,
+                    '". Expected NOTE:DURATION.');
+            Exit;
+        end;
+
+        chord_text := Copy(chunk, 1, colon_pos - 1);
+        duration_text := Copy(chunk, colon_pos + 1, Length(chunk));
+        if not IsValidDurationText(duration_text) then
+        begin
+            writeln('Error: Invalid duration format in "', chunk,
+                    '". Duration must be a positive integer.');
+            Exit;
+        end;
+
+        // An empty chord is a rest. Otherwise every slash-separated item
+        // must be a valid note; empty items such as C4//E4 are malformed.
+        if chord_text <> '' then
+        begin
+            note_list := chord_text + '/';
+            note_count := 0;
+            while Length(note_list) > 0 do
+            begin
+                slash_pos := Pos('/', note_list);
+                if slash_pos = 0 then
+                    Break;
+                note_text := Trim(Copy(note_list, 1, slash_pos - 1));
+                Delete(note_list, 1, slash_pos);
+
+                if note_text = '' then
+                begin
+                    writeln('Error: Invalid note format in "', chunk,
+                            '". Empty notes are not allowed in a chord.');
+                    Exit;
+                end;
+
+                Inc(note_count);
+                if note_count > 4 then
+                begin
+                    writeln('Error: More than 4 notes polyphony is not supported.');
+                    Exit;
+                end;
+
+                if not IsValidNoteToken(note_text, notation) then
+                begin
+                    writeln('Error: Invalid note format in "', note_text,
+                            '" for the selected notation system.');
+                    Exit;
+                end;
+            end;
+        end;
+    end;
+
+    Result := True;
+end;
+
 procedure GenerateChannelsNotes(chord_string: string; duration_ms: Integer; system: char);
 var
     i, j, sample_count, active_tracks, p, track: Integer;
@@ -34,7 +196,7 @@ begin
     active_tracks := 0;
     current_chunk := chord_string + '/';
 
-    // 1. EXTRACTION DES FREQUENCES (Jusqu'à 4 canaux)
+    // 1. FREQUENCES EXTRACTION
     while (Length(current_chunk) > 0) and (active_tracks < 4) do
     begin
         p := Pos('/', current_chunk);
@@ -110,8 +272,8 @@ begin
             Break;
         end;
     end;
-
-    // 2. ECRITURE SIMULTANEE DANS CHAQUE FICHIER DE CANAL
+    
+    // 2. SIMULTANEOUS WRITING IN EVERY CANAL FILE
     for track := 0 to 3 do
     begin
         for i := 0 to sample_count - 1 do
@@ -134,7 +296,7 @@ begin
     end;
 end;
 
-procedure PlayPartition(partition: string; system: char);
+function PlayPartition(partition: string; system: char): Boolean;
 var
     p, chunk: string;
     space_pos, colon_pos: Integer;
@@ -143,6 +305,10 @@ var
     total_duration_ms: Integer;
     track: Integer;
 begin
+    Result := False;
+    if not ValidatePartition(partition, system) then
+        Exit;
+
     p := Trim(partition) + ' ';
 
     Assign(audio_files[0], TEMP_FILE_0); Rewrite(audio_files[0]);
@@ -181,6 +347,7 @@ begin
 
     fpSystem('sleep ' + FloatToStr(total_duration_ms / 1000 + 0.5));
     fpSystem('rm -f ' + TEMP_FILE_0 + ' ' + TEMP_FILE_1 + ' ' + TEMP_FILE_2 + ' ' + TEMP_FILE_3);
+    Result := True;
 end;
 
 begin
@@ -280,7 +447,8 @@ begin
         end;
         if Length(Trim(partition_text)) = 0 then Continue;
         writeln('Calculating and playing...');
-        PlayPartition(partition_text, system_choice);
+        if not PlayPartition(partition_text, system_choice) then
+            Continue;
 // ---------------------------------------------------------------------
 // PERSISTENCE SUBSYSTEM (EXPORT MATRIX ROUTINE)
 // ---------------------------------------------------------------------
