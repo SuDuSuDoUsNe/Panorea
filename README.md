@@ -11,7 +11,9 @@ Just a software that plays music !
 Of course, if your ears explode, I'm not responsible, because you have FULLY read the policy, at ``` miscellaneous/licence.txt ```
 ## Installation
 
-Install Panorea
+Install Panorea:
+
+Firstly, you must download the repository ! 
 
 ```bash
   cd /path-to/panorea/
