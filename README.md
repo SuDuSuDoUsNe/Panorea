@@ -14,6 +14,7 @@ Of course, if your ears explode, I'm not responsible, because you have FULLY rea
 Install Panorea:
 
 Firstly, you must download the repository ! 
+Then do:
 
 ```bash
   cd /path-to/panorea/
