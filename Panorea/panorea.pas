@@ -1,15 +1,19 @@
 program panorea;
-uses unix, sysutils;
+{$H+}
+uses unix, baseunix, sysutils;
 
 const
     SAMPLING_RATE = 8000;
+    BUF_SIZE = 4096;
     TEMP_FILE_0 = '/tmp/chan0.raw';
     TEMP_FILE_1 = '/tmp/chan1.raw';
     TEMP_FILE_2 = '/tmp/chan2.raw';
     TEMP_FILE_3 = '/tmp/chan3.raw';
 
 var
-    audio_files: array[0..3] of file of Byte;
+    audio_files: array[0..3] of File;
+    track_buf: array[0..3, 0..BUF_SIZE - 1] of Byte;
+    track_pos: array[0..3] of Integer;
     system_choice: char;
     partition_text: string;
     file_path: string;
@@ -19,6 +23,26 @@ var
     export_choice: char;
     export_name: string;
     show_example: boolean;
+
+procedure WriteTrackByte(track: Integer; val: Byte);
+begin
+    track_buf[track, track_pos[track]] := val;
+    inc(track_pos[track]);
+    if track_pos[track] = BUF_SIZE then
+    begin
+        BlockWrite(audio_files[track], track_buf[track, 0], BUF_SIZE);
+        track_pos[track] := 0;
+    end;
+end;
+
+procedure FlushTrackBuffer(track: Integer);
+begin
+    if track_pos[track] > 0 then
+    begin
+        BlockWrite(audio_files[track], track_buf[track, 0], track_pos[track]);
+        track_pos[track] := 0;
+    end;
+end;
 
 procedure GenerateChannelsNotes(chord_string: string; duration_ms: Integer; system: char);
 var
@@ -34,7 +58,7 @@ begin
     active_tracks := 0;
     current_chunk := chord_string + '/';
 
-    // 1. Extract note frequencies (up to 4 channels).
+    // 1. EXTRACTION DES FREQUENCES (Jusqu'à 4 canaux)
     while (Length(current_chunk) > 0) and (active_tracks < 4) do
     begin
         p := Pos('/', current_chunk);
@@ -111,7 +135,7 @@ begin
         end;
     end;
 
-    // 2. Write samples simultaneously to each channel file.
+    // 2. ECRITURE SIMULTANEE DANS CHAQUE FICHIER DE CANAL
     for track := 0 to 3 do
     begin
         for i := 0 to sample_count - 1 do
@@ -123,13 +147,13 @@ begin
                 angle := 2.0 * Pi * freq_array[track] * i / SAMPLING_RATE;
                 value := Round(127.0 + 127.0 * Sin(angle));
             end;
-            Write(audio_files[track], value);
+            WriteTrackByte(track, value);
         end;
 
         for i := 0 to Round((SAMPLING_RATE * 25) / 1000) - 1 do
         begin
             value := 127;
-            Write(audio_files[track], value);
+            WriteTrackByte(track, value);
         end;
     end;
 end;
@@ -142,13 +166,20 @@ var
     duration_ms: Integer;
     total_duration_ms: Integer;
     track: Integer;
+    fds: TFDSet;
+    tv: TTimeVal;
+    elapsed_ms: Integer;
+    dummy: string;
 begin
     p := Trim(partition) + ' ';
 
-    Assign(audio_files[0], TEMP_FILE_0); Rewrite(audio_files[0]);
-    Assign(audio_files[1], TEMP_FILE_1); Rewrite(audio_files[1]);
-    Assign(audio_files[2], TEMP_FILE_2); Rewrite(audio_files[2]);
-    Assign(audio_files[3], TEMP_FILE_3); Rewrite(audio_files[3]);
+    for track := 0 to 3 do
+        track_pos[track] := 0;
+
+    Assign(audio_files[0], TEMP_FILE_0); Rewrite(audio_files[0], 1);
+    Assign(audio_files[1], TEMP_FILE_1); Rewrite(audio_files[1], 1);
+    Assign(audio_files[2], TEMP_FILE_2); Rewrite(audio_files[2], 1);
+    Assign(audio_files[3], TEMP_FILE_3); Rewrite(audio_files[3], 1);
 
     total_duration_ms := 0;
 
@@ -170,7 +201,11 @@ begin
         end;
     end;
 
-    for track := 0 to 3 do Close(audio_files[track]);
+    for track := 0 to 3 do
+    begin
+        FlushTrackBuffer(track);
+        Close(audio_files[track]);
+    end;
 
     // Have you ever tasted Camembert ? No ? Well when you taste it, either you love it, or you hate it to death.
     // This background execution multi-process mixing method is exactly like Camembert.
@@ -179,7 +214,21 @@ begin
     fpSystem('aplay -r 8000 -f U8 ' + TEMP_FILE_2 + ' > /dev/null 2>&1 &');
     fpSystem('aplay -r 8000 -f U8 ' + TEMP_FILE_3 + ' > /dev/null 2>&1 &');
 
-    fpSystem('sleep ' + FloatToStr(total_duration_ms / 1000 + 0.5));
+    writeln('Playing... Press [ENTER] to stop.');
+    while fpSystem('pgrep -x aplay > /dev/null 2>&1') = 0 do
+    begin
+        fpFD_ZERO(fds);
+        fpFD_SET(0, fds);
+        tv.tv_sec := 0;
+        tv.tv_usec := 100000;
+        if fpSelect(1, @fds, nil, nil, @tv) > 0 then
+        begin
+            readln(dummy);
+            writeln('Stopped.');
+            Break;
+        end;
+    end;
+    fpSystem('killall -q aplay');
     fpSystem('rm -f ' + TEMP_FILE_0 + ' ' + TEMP_FILE_1 + ' ' + TEMP_FILE_2 + ' ' + TEMP_FILE_3);
 end;
 
