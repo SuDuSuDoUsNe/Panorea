@@ -9,4 +9,10 @@ echo "Installing Panorea to system binary path..."
 sudo cp bin/panorea /usr/local/bin/panorea
 sudo chmod +x /usr/local/bin/panorea
 
+if [ -f "bin/midi2music" ]; then
+    echo "Installing midi2music to system binary path..."
+    sudo cp bin/midi2music /usr/local/bin/midi2music
+    sudo chmod +x /usr/local/bin/midi2music
+fi
+
 echo "Installation ended"
