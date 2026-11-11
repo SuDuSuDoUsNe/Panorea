@@ -59,6 +59,17 @@ Example: C4/E4/G4:400 :200 C4/F4/A4:400
 Your partition:C4/E4/G4:400 :200 C4/F4/A4:400
 ```
 Yes, I'm good at computers, not music ! I've just copy-pasted
+
+## How to use midi2music
+midi2music is a tool I created for Panorea, it converts midi files to music files
+Here's how to use it
+```midi2music /path-to/music.midi
+Notation set to: en
+Successfully generated: /path-to/music.music
+```
+You can then play this music using Panorea  
+
+
 ## What Panorea stands for and how to pronouce it ?
 
 Panorea stands for "Pascal Notes Reader"
