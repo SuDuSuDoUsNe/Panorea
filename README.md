@@ -56,7 +56,7 @@ Then, you can enter some notes
 
 Enter notes separated by spaces. Type "Q" to quit, "CLR" to clear screen.
 Example: C4/E4/G4:400 :200 C4/F4/A4:400
-Your partition:C4/E4/G4:400 :200 C4/F4/A4:400
+Your partition: C4/E4/G4:400 :200 C4/F4/A4:400
 ```
 Yes, I'm good at computers, not music ! I've just copy-pasted
 
